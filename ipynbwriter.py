@@ -83,19 +83,19 @@ class IpynbTranslator(nodes.NodeVisitor):
         # the idea is to make each cells executable such that the user discovers the result
         if self.current_state == 'code':
             code = self.cells.pop()['source']
-            codeblocks = []
+            codeblocks = [[]]
             output_line = False
             for line in code.splitlines():
                 for start in [self.code_indent, self.code_cont]:
                     if line.startswith(start):
-                        if output_line == True or len(codeblocks) == 0:
+                        if output_line == True:
                             codeblocks.append([])
                             output_line = False
                         line = line[len(start):]
                         codeblocks[-1].append(line)
                         break
                 else:
-                    # TODO this is only R and Python specific
+                    # TODO that comment syntax is R and Python specific. Make this a configuration.
                     if len(line) > 0:
                         line = '# ' + line
                         codeblocks[-1].append(line)
