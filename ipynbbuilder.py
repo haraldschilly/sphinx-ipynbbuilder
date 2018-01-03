@@ -11,7 +11,7 @@ from six.moves import cPickle as pickle
 
 import sphinx
 from sphinx.builders import Builder
-from sphinx.util import logging
+#from sphinx.util import logging
 from sphinx.util.inspect import safe_getattr
 
 import codecs
