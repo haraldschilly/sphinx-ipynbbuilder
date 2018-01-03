@@ -57,7 +57,11 @@ class IpynbBuilder(Builder):
         return ''
 
     def prepare_writing(self, docnames):
-        self.writer = IpynbWriter(self, self.config.ipynb_kernel)
+        self.writer = IpynbWriter(self,
+                  self.config.ipynb_kernel,
+                  self.config.ipynb_indent,
+                  self.config.ipynb_continue
+        )
 
     def write_doc(self, docname, doctree):
         self.current_docname = docname
@@ -82,5 +86,7 @@ def setup(app):
     # type: (Sphinx) -> Dict[unicode, Any]
     app.add_builder(IpynbBuilder)
     app.add_config_value('ipynb_kernel', 'python', False)
+    app.add_config_value('ipynb_indent', '>>> ', False)
+    app.add_config_value('ipynb_continue', '... ', False)
     return {'version': sphinx.__display_version__, 'parallel_read_safe': True}
 

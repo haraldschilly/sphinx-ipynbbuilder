@@ -18,6 +18,8 @@ from docutils.utils import column_width
 from sphinx import addnodes
 from sphinx.locale import admonitionlabels, _
 
+from pprint import pprint
+
 MAXWIDTH = 80
 STDINDENT = 2
 
@@ -28,14 +30,16 @@ class IpynbWriter(writers.Writer):
 
     output = None
 
-    def __init__(self, builder, kernel):
+    def __init__(self, builder, kernel, indent, cont):
         writers.Writer.__init__(self)
         self.builder = builder
         self.kernel = kernel
+        self.code_indent = indent
+        self.code_cont = cont
         self.translator_class = self.builder.translator_class or IpynbTranslator
 
     def translate(self):
-        visitor = self.translator_class(self.document, self.builder, self.kernel)
+        visitor = self.translator_class(self.document, self.builder, self.kernel, self.code_indent, self.code_cont)
         self.document.walkabout(visitor)
         self.output = visitor.body
 
@@ -43,10 +47,12 @@ class IpynbWriter(writers.Writer):
 class IpynbTranslator(nodes.NodeVisitor):
     sectionchars = '*=-~"+`'
 
-    def __init__(self, document, builder, kernel):
+    def __init__(self, document, builder, kernel, indent, cont):
         nodes.NodeVisitor.__init__(self, document)
         self.builder = builder
         self.kernel = kernel
+        self.code_indent = indent
+        self.code_cont = cont
 
         self.nl = '\n\n' # newline in markdown ?
         self.sectionchars = builder.config.text_sectionchars
@@ -56,6 +62,7 @@ class IpynbTranslator(nodes.NodeVisitor):
         self.lineblocklevel = 0
         self.stateindent = [0]
         self.table = None
+        self.current_state = None
 
     def add_text(self, text):
         self.cells[-1]["source"] += text
@@ -67,11 +74,36 @@ class IpynbTranslator(nodes.NodeVisitor):
             cell = ipynb.new_markdown_cell()
         else:
             raise ValueError("Unknown cell type '%s'" % cell_type)
+        self.current_state = cell_type
         self.cells.append(cell)
 
     def end_state(self):
         # post processing the last cell
-        pass
+        # break up the code cells and remove the python indentation
+        # the idea is to make each cells executable such that the user discovers the result
+        if self.current_state == 'code':
+            code = self.cells.pop()['source']
+            codeblocks = []
+            output_line = False
+            for line in code.splitlines():
+                for start in [self.code_indent, self.code_cont]:
+                    if line.startswith(start):
+                        if output_line == True or len(codeblocks) == 0:
+                            codeblocks.append([])
+                            output_line = False
+                        line = line[len(start):]
+                        codeblocks[-1].append(line)
+                        break
+                else:
+                    # TODO this is only R and Python specific
+                    if len(line) > 0:
+                        line = '# ' + line
+                        codeblocks[-1].append(line)
+                    output_line = True
+            for block in codeblocks:
+                if len(block) > 0:
+                    self.new_state('code')
+                    self.add_text('\n'.join(block))
 
     def visit_document(self, node):
         # self.new_state()
@@ -82,7 +114,7 @@ class IpynbTranslator(nodes.NodeVisitor):
 
         nb = ipynb.new_notebook()
         nb["cells"] = self.cells
-        
+
         nb["metadata"]["kernelspec"] = {"name" : self.kernel}
 
         self.body = ipynb.writes_json(nb)
@@ -785,6 +817,10 @@ class IpynbTranslator(nodes.NodeVisitor):
 
     visit_math_block = visit_math
     visit_displaymath = visit_math
+
+    def visit_autosummary_table(self, node):
+        pprint("unprocessed node autosummary table:")
+        pprint(node)
 
     def unknown_visit(self, node):
         raise NotImplementedError('Unknown node: ' + node.__class__.__name__)
