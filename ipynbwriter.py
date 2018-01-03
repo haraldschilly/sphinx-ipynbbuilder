@@ -821,6 +821,11 @@ class IpynbTranslator(nodes.NodeVisitor):
     def visit_autosummary_table(self, node):
         pprint("unprocessed node autosummary table:")
         pprint(node)
+        pprint(type(node))
+        #pprint(dir(node))
+
+    def depart_autosummary_table(self, node):
+        pass
 
     def unknown_visit(self, node):
         raise NotImplementedError('Unknown node: ' + node.__class__.__name__)
