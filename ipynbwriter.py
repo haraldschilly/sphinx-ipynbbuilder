@@ -827,6 +827,13 @@ class IpynbTranslator(nodes.NodeVisitor):
     def depart_autosummary_table(self, node):
         pass
 
+    def visit_autosummary_toc(self, node):
+        pass
+
+    def depart_autosummary_toc(self, node):
+        pass
+
+
     def unknown_visit(self, node):
         raise NotImplementedError('Unknown node: ' + node.__class__.__name__)
 
